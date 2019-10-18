@@ -2,6 +2,7 @@
 #include "AirBlueprintLib.h"
 #include "common/common_utils/Utils.hpp"
 #include "Weather/WeatherLib.h"
+#include "Lockstep.h"
 
 WorldSimApi::WorldSimApi(ASimModeBase* simmode)
     : simmode_(simmode)
@@ -10,6 +11,7 @@ WorldSimApi::WorldSimApi(ASimModeBase* simmode)
 
 bool WorldSimApi::isPaused() const
 {
+	if (GLockstep.IsEnabled()) return false;
     return simmode_->isPaused();
 }
 
@@ -26,12 +28,20 @@ void WorldSimApi::reset()
 
 void WorldSimApi::pause(bool is_paused)
 {
+	if (GLockstep.IsEnabled()) return;
     simmode_->pause(is_paused);
 }
 
 void WorldSimApi::continueForTime(double seconds)
 {
-    simmode_->continueForTime(seconds);
+	if (GLockstep.IsEnabled()) return;
+	simmode_->continueForTime(seconds);
+}
+
+void WorldSimApi::lockstep()
+{
+	if (GLockstep.IsEnabled())
+		GLockstep.Lockstep();
 }
 
 void WorldSimApi::setTimeOfDay(bool is_enabled, const std::string& start_datetime, bool is_start_datetime_dst,

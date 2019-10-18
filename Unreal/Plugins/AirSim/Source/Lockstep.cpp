@@ -3,9 +3,8 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
-#include "Misc/CoreDelegates.h"
 #include "Lockstep.h"
+#include "Misc/CoreDelegates.h"
 
 FLockstep GLockstep;
 
@@ -20,6 +19,7 @@ FLockstep::~FLockstep()
 void FLockstep::SetEnabled()
 {
 	check(!isEnabled_);
+	isEnabled_ = true;
 	FCoreDelegates::OnEndFrame.AddRaw(this, &FLockstep::Callback_OnEndFrame);
 }
 

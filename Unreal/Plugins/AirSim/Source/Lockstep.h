@@ -1,6 +1,7 @@
 // VICTECH
 
 #pragma once
+#include "CoreMinimal.h"
 #include <mutex>
 #include <condition_variable>
 

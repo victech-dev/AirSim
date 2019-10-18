@@ -6,6 +6,7 @@
 
 #include "AirBlueprintLib.h"
 #include "Async/Async.h"
+#include "Lockstep.h"
 
 RenderRequest::RenderRequest(UGameViewportClient * game_viewport, std::function<void()>&& query_camera_pose_cb)
     : params_(nullptr), results_(nullptr), req_size_(0),
@@ -59,40 +60,46 @@ void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::v
         results_ = results.data();
         req_size_ = req_size;
 
-        // Queue up the task of querying camera pose in the game thread and synchronizing render thread with camera pose
-        AsyncTask(ENamedThreads::GameThread, [this]() {
-            check(IsInGameThread());
+		if (GLockstep.IsEnabled())
+		{
+			// When lockstep on, UE GameThread is suspended for now, so this direct reading is safe here.
+			query_camera_pose_cb_();
+			// Note bCaptureEveryTick should be turned on for valid capture component.
+			ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
+				[this](FRHICommandListImmediate& RHICmdList) { ExecuteTask(); });
+		}
+		else
+		{
+			// Queue up the task of querying camera pose in the game thread and synchronizing render thread with camera pose
+			AsyncTask(ENamedThreads::GameThread, [this]() {
+				check(IsInGameThread());
 
-            saved_DisableWorldRendering_ = game_viewport_->bDisableWorldRendering;
-            game_viewport_->bDisableWorldRendering = 0;
-            end_draw_handle_ = game_viewport_->OnEndDraw().AddLambda([this] {
-                check(IsInGameThread());
+				saved_DisableWorldRendering_ = game_viewport_->bDisableWorldRendering;
+				game_viewport_->bDisableWorldRendering = 0;
+				end_draw_handle_ = game_viewport_->OnEndDraw().AddLambda([this] {
+					check(IsInGameThread());
 
-                // capture CameraPose for this frame
-                query_camera_pose_cb_();
+					// capture CameraPose for this frame
+					query_camera_pose_cb_();
 
-                // The completion is called immeidately after GameThread sends the
-                // rendering commands to RenderThread. Hence, our ExecuteTask will
-                // execute *immediately* after RenderThread renders the scene!
-                ENQUEUE_UNIQUE_RENDER_COMMAND_ONEPARAMETER(
-                    SceneDrawCompletion,
-                    RenderRequest *, This, this,
-                    {
-                        This->ExecuteTask();
-                    }
-                );
+					// The completion is called immeidately after GameThread sends the
+					// rendering commands to RenderThread. Hence, our ExecuteTask will
+					// execute *immediately* after RenderThread renders the scene!
+					ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
+						[this](FRHICommandListImmediate& RHICmdList) { ExecuteTask(); });
 
-                game_viewport_->bDisableWorldRendering = saved_DisableWorldRendering_;
+					game_viewport_->bDisableWorldRendering = saved_DisableWorldRendering_;
 
-                assert(end_draw_handle_.IsValid());
-                game_viewport_->OnEndDraw().Remove(end_draw_handle_);
-            });
+					assert(end_draw_handle_.IsValid());
+					game_viewport_->OnEndDraw().Remove(end_draw_handle_);
+				});
 
-            // while we're still on GameThread, enqueue request for capture the scene!
-            for (unsigned int i = 0; i < req_size_; ++i) {
-                params_[i]->render_component->CaptureSceneDeferred();
-            }
-        });
+				// while we're still on GameThread, enqueue request for capture the scene!
+				for (unsigned int i = 0; i < req_size_; ++i) {
+					params_[i]->render_component->CaptureSceneDeferred();
+				}
+			});
+		}
 
         // wait for this task to complete
         while (!wait_signal_->waitFor(5)) {

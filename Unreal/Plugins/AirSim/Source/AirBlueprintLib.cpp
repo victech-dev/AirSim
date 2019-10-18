@@ -21,6 +21,7 @@
 #include "Engine/Engine.h"
 #include <exception>
 #include "common/common_utils/Utils.hpp"
+#include "Lockstep.h"
 
 /*
 //TODO: change naming conventions to same as other files?
@@ -245,7 +246,9 @@ void UAirBlueprintLib::RunCommandOnGameThread(TFunction<void()> InFunction, bool
         InFunction();
     else {
         FGraphEventRef task = FFunctionGraphTask::CreateAndDispatchWhenReady(MoveTemp(InFunction), InStatId, nullptr, ENamedThreads::GameThread);
-        if (wait)
+		if (GLockstep.IsEnabled())
+			GLockstep.Lockstep();
+		if (wait)
             FTaskGraphInterface::Get().WaitUntilTaskCompletes(task);
     }
 }

@@ -1,5 +1,6 @@
 #include "SimHUD.h"
 #include "ConstructorHelpers.h"
+#include "Engine/Engine.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/FileHelper.h"
 
@@ -29,6 +30,21 @@ void ASimHUD::BeginPlay()
         createSimMode();
         createMainWidget();
         setupInputBindings();
+
+		// VICTECH: When UseFixedTimeStep is set, enable lockstep feature and turn off viewport rendering
+		if (FApp::UseFixedTimeStep())
+		{
+			// disable world rendering
+			GetWorld()->GetGameViewport()->EngineShowFlags.SetRendering(false);
+			// disable debug message output
+			GEngine->bEnableOnScreenDebugMessages = false;
+			// disable widget rendering
+			if (widget_ != nullptr)
+				widget_->RemoveFromViewport();
+			// start lockstep
+			GLockstep.SetEnabled();
+		}
+
         if (simmode_)
             simmode_->startApiServer();
     }
@@ -78,12 +94,12 @@ void ASimHUD::inputEventToggleRecording()
 void ASimHUD::inputEventToggleReport()
 {
     simmode_->EnableReport = !simmode_->EnableReport;
-    widget_->setReportVisible(simmode_->EnableReport);
+	widget_->setReportVisible(simmode_->EnableReport);
 }
 
 void ASimHUD::inputEventToggleHelp()
 {
-    widget_->toggleHelpVisibility();
+	widget_->toggleHelpVisibility();
 }
 
 void ASimHUD::inputEventToggleTrace()
@@ -136,16 +152,16 @@ void ASimHUD::updateWidgetSubwindowVisibility()
         if (camera != nullptr)
             camera->setCameraTypeEnabled(camera_type, is_visible);
 
-        widget_->setSubwindowVisibility(window_index,
-            is_visible,
-            is_visible ? camera->getRenderTarget(camera_type, false) : nullptr
-        );
+		widget_->setSubwindowVisibility(window_index,
+			is_visible,
+			is_visible ? camera->getRenderTarget(camera_type, false) : nullptr
+		);
     }
 }
 
 bool ASimHUD::isWidgetSubwindowVisible(int window_index)
 {
-    return widget_->getSubwindowVisibility(window_index) != 0;
+	return widget_->getSubwindowVisibility(window_index) != 0;
 }
 
 void ASimHUD::inputEventToggleSubwindow0()
@@ -198,7 +214,7 @@ void ASimHUD::createMainWidget()
 
     initializeSubWindows();
 
-    widget_->AddToViewport();
+	widget_->AddToViewport();
 
     //synchronize PIP views
     widget_->initializeForPlay();
@@ -227,14 +243,6 @@ void ASimHUD::setUnrealEngineSettings()
     //we get error that GameThread has timed out after 30 sec waiting on render thread
     static const auto render_timeout_var = IConsoleManager::Get().FindConsoleVariable(TEXT("g.TimeoutForBlockOnRenderFence"));
     render_timeout_var->Set(300000);
-
-	// VICTECH:
-	// When UseFixedTimeStep is set, enable lockstep feature and turn off viewport rendering
-	if (FApp::UseFixedTimeStep())
-	{
-		GetWorld()->GetGameViewport()->EngineShowFlags.SetRendering(false);
-		GLockstep.SetEnabled();
-	}
 }
 
 void ASimHUD::setupInputBindings()

@@ -17,6 +17,8 @@ bool WorldSimApi::isPaused() const
 
 void WorldSimApi::reset()
 {
+	// guard to ensure update called
+	lockstep(); 
     UAirBlueprintLib::RunCommandOnGameThread([this]() {
         simmode_->reset();
 

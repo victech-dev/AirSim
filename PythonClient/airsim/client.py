@@ -46,6 +46,8 @@ class VehicleClient:
         return self.client.call("simIsPaused")
     def simContinueForTime(self, seconds):
         self.client.call('simContinueForTime', seconds)
+    def simLockstep(self):
+        self.client.call('simLockstep')
 
     def getHomeGeoPoint(self, vehicle_name = ''):
         return GeoPoint.from_msgpack(self.client.call('getHomeGeoPoint', vehicle_name))

@@ -10,6 +10,7 @@
 #include "common/AirSimSettings.hpp"
 #include <stdexcept>
 
+#include "Lockstep.h"
 
 ASimHUD::ASimHUD()
 {
@@ -226,6 +227,14 @@ void ASimHUD::setUnrealEngineSettings()
     //we get error that GameThread has timed out after 30 sec waiting on render thread
     static const auto render_timeout_var = IConsoleManager::Get().FindConsoleVariable(TEXT("g.TimeoutForBlockOnRenderFence"));
     render_timeout_var->Set(300000);
+
+	// VICTECH:
+	// When UseFixedTimeStep is set, enable lockstep feature and turn off viewport rendering
+	if (FApp::UseFixedTimeStep())
+	{
+		GetWorld()->GetGameViewport()->EngineShowFlags.SetRendering(false);
+		GLockstep.SetEnabled();
+	}
 }
 
 void ASimHUD::setupInputBindings()

@@ -78,6 +78,7 @@
     <ClCompile Include="unreal\plugins\airsim\source\car\CarWheelFront.cpp" />
     <ClCompile Include="unreal\plugins\airsim\source\car\CarWheelRear.cpp" />
     <ClCompile Include="unreal\plugins\airsim\source\car\SimModeCar.cpp" />
+    <ClCompile Include="Unreal\Plugins\AirSim\Source\Lockstep.cpp" />
     <ClCompile Include="unreal\plugins\airsim\source\ManualPoseController.cpp" />
     <ClCompile Include="unreal\plugins\airsim\source\multirotor\FlyingPawn.cpp" />
     <ClCompile Include="Unreal\Plugins\AirSim\Source\Multirotor\MultirotorSimApi.cpp" />
@@ -111,6 +112,7 @@
     <ClInclude Include="unreal\plugins\airsim\source\car\CarWheelFront.h" />
     <ClInclude Include="unreal\plugins\airsim\source\car\CarWheelRear.h" />
     <ClInclude Include="unreal\plugins\airsim\source\car\SimModeCar.h" />
+    <ClInclude Include="Unreal\Plugins\AirSim\Source\Lockstep.h" />
     <ClInclude Include="unreal\plugins\airsim\source\ManualPoseController.h" />
     <ClInclude Include="unreal\plugins\airsim\source\multirotor\FlyingPawn.h" />
     <ClInclude Include="unreal\plugins\airsim\source\multirotor\MultiRotorConnector.h" />

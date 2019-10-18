@@ -108,6 +108,9 @@
     <ClCompile Include="Unreal\Plugins\AirSim\Source\UnrealSensors\UnrealLidarSensor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Unreal\Plugins\AirSim\Source\Lockstep.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="unreal\plugins\airsim\source\AirBlueprintLib.h">
@@ -208,6 +211,9 @@
     </ClInclude>
     <ClInclude Include="Unreal\Plugins\AirSim\Source\UnrealSensors\UnrealLidarSensor.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Unreal\Plugins\AirSim\Source\Lockstep.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

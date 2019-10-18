@@ -257,6 +257,11 @@ void RpcLibClientBase::simContinueForTime(double seconds)
     pimpl_->client.call("simContinueForTime", seconds);
 }
 
+void RpcLibClientBase::simLockstep()
+{
+	pimpl_->client.call("simLockstep");
+}
+
 void RpcLibClientBase::simEnableWeather(bool enable)
 {
     pimpl_->client.call("simEnableWeather", enable);

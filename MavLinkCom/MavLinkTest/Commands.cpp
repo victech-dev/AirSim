@@ -468,12 +468,7 @@ void DumpLogCommandsCommand::Execute(std::shared_ptr<MavLinkVehicle> com)
     unused(com);
 //TODO: make below future proof (i.e. usable by C++17 compiler) - also change same in main.cpp
 #if defined(USE_CPP_FILESYSTEM)
-//can't use experimental stuff on Linux because of potential ABI issues
-#if defined(_WIN32) || ((defined __cplusplus) && (__cplusplus < 201700L))
-    using namespace std::experimental::filesystem;
-#else
     using namespace std::filesystem;
-#endif
 
     path dirPath(log_folder_);
 

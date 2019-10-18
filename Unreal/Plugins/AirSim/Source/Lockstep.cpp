@@ -5,6 +5,8 @@
 
 #include "Lockstep.h"
 #include "Misc/CoreDelegates.h"
+#include "common/ClockFactory.hpp"
+#include "common/SteppableClock.hpp"
 
 FLockstep GLockstep;
 
@@ -40,6 +42,9 @@ void FLockstep::Callback_OnEndFrame() // Called in GameThread
 		std::unique_lock<std::mutex> lk(mtx_);
 		cv_.wait(lk, [this]() { return isGameThreadRunning_; });
 	}
+
+	// TODO this would not work in SimModeWorld which contains internal async stepping task
+	msr::airlib::ClockFactory::get()->step();
 }
 
 void FLockstep::Lockstep() // Called in external (i.e. rpc handler thread)

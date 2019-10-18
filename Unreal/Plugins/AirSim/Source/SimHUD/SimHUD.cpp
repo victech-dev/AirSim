@@ -12,6 +12,8 @@
 #include <stdexcept>
 
 #include "Lockstep.h"
+#include "common/ClockFactory.hpp"
+#include "common/SteppableClock.hpp"
 
 ASimHUD::ASimHUD()
 {
@@ -31,7 +33,7 @@ void ASimHUD::BeginPlay()
         createMainWidget();
         setupInputBindings();
 
-		// VICTECH: When UseFixedTimeStep is set, enable lockstep feature and turn off viewport rendering
+		// VICTECH: When UseFixedTimeStep is set, enable lockstep feature
 		if (FApp::UseFixedTimeStep())
 		{
 			// disable world rendering
@@ -41,6 +43,9 @@ void ASimHUD::BeginPlay()
 			// disable widget rendering
 			if (widget_ != nullptr)
 				widget_->RemoveFromViewport();
+			// override clock to steppable clock without clock_speed multiplier
+			msr::airlib::ClockFactory::get(std::make_shared<msr::airlib::SteppableClock>(
+				static_cast<msr::airlib::TTimeDelta>(FApp::GetFixedDeltaTime()))); 
 			// start lockstep
 			GLockstep.SetEnabled();
 		}

@@ -277,6 +277,16 @@ APIPCamera* PawnSimApi::getCamera(const std::string& camera_name)
         static_cast<const PawnSimApi*>(this)->getCamera(camera_name));
 }
 
+const common_utils::UniqueValueMap<std::string, APIPCamera*>& PawnSimApi::getCameras() const
+{
+	return cameras_;
+}
+
+common_utils::UniqueValueMap<std::string, APIPCamera*>& PawnSimApi::getCameras()
+{
+	return cameras_;
+}
+
 const UnrealImageCapture* PawnSimApi::getImageCapture() const
 {
     return image_capture_.get();

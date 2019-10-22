@@ -10,6 +10,7 @@
 #include <string>
 #include <exception>
 #include "AirBlueprintLib.h"
+#include "Lockstep.h"
 
 
 APIPCamera::APIPCamera()
@@ -481,7 +482,7 @@ void APIPCamera::onViewModeChanged(bool nodisplay)
     for (unsigned int image_type = 0; image_type < imageTypeCount(); ++image_type) {
         USceneCaptureComponent2D* capture = getCaptureComponent(static_cast<ImageType>(image_type), false);
         if (capture) {
-            if (nodisplay) {
+            if (nodisplay || GLockstep.IsEnabled()) {
                 capture->bCaptureEveryFrame = false;
                 capture->bCaptureOnMovement = false;
             } else {

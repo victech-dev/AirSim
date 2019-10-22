@@ -107,7 +107,9 @@ public: //Unreal specific methods
     //returns one of the cameras attached to the pawn
     const APIPCamera* getCamera(const std::string& camera_name) const;
     APIPCamera* getCamera(const std::string& camera_name);
-    int getCameraCount();
+	const common_utils::UniqueValueMap<std::string, APIPCamera*>& getCameras() const;
+	common_utils::UniqueValueMap<std::string, APIPCamera*>& getCameras();
+	int getCameraCount();
 
     //if enabled, this would show some flares
     void displayCollisionEffect(FVector hit_location, const FHitResult& hit);

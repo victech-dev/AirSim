@@ -31,6 +31,10 @@ public:
     virtual void pause(bool is_paused) override;
     virtual void continueForTime(double seconds) override;
 
+	// VICTECH
+	msr::airlib::PhysicsWorld& getPhysicsWorld() { return *physics_world_; }
+	// VICTECH
+
 protected:
     void startAsyncUpdator();
     void stopAsyncUpdator();

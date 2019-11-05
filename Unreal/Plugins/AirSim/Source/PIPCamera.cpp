@@ -482,7 +482,7 @@ void APIPCamera::onViewModeChanged(bool nodisplay)
     for (unsigned int image_type = 0; image_type < imageTypeCount(); ++image_type) {
         USceneCaptureComponent2D* capture = getCaptureComponent(static_cast<ImageType>(image_type), false);
         if (capture) {
-            if (nodisplay || GLockstep.IsEnabled()) {
+            if (nodisplay) {
                 capture->bCaptureEveryFrame = false;
                 capture->bCaptureOnMovement = false;
             } else {

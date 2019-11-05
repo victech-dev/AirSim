@@ -56,7 +56,12 @@ public:
     {
         world_.stopAsyncUpdator();
     }
-
+	// VICTECH
+	void updateSync()
+	{
+		world_.update();
+	}
+	// VICTECH
 
     void enableStateReport(bool is_enabled)
     {

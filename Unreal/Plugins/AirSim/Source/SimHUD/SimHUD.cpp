@@ -33,19 +33,16 @@ void ASimHUD::BeginPlay()
         createMainWidget();
         setupInputBindings();
 
-		// VICTECH: When UseFixedTimeStep is set, enable lockstep feature
-		if (FApp::UseFixedTimeStep())
-		{
+		// VICTECH: enable lockstep feature
+		if (GLockstep.IsEnabled())
+		{			
 			// disable debug message output
 			GEngine->bEnableOnScreenDebugMessages = false;
 			// disable widget rendering
 			if (widget_ != nullptr)
 				widget_->RemoveFromViewport();
-			// override clock to steppable clock without clock_speed multiplier
-			msr::airlib::ClockFactory::get(std::make_shared<msr::airlib::SteppableClock>(
-				static_cast<msr::airlib::TTimeDelta>(FApp::GetFixedDeltaTime()))); 
 			// start lockstep
-			GLockstep.SetEnabled(simmode_->getApiProvider());
+			GLockstep.Initialize(simmode_);
 		}
 
         if (simmode_)
@@ -278,12 +275,6 @@ void ASimHUD::initializeSettings()
     for (const auto& error : AirSimSettings::singleton().error_messages) {
         UAirBlueprintLib::ShowMessage(EAppMsgType::Ok, error, "settings.json");
     }
-
-	// VICTECH: When UseFixedTimeStep is set, disable camera rendering
-	if (FApp::UseFixedTimeStep())
-	{
-		AirSimSettings::singleton().initial_view_mode = (int)ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY;
-	}
 }
 
 const std::vector<ASimHUD::AirSimSettings::SubwindowSetting>& ASimHUD::getSubWindowSettings() const

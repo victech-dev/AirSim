@@ -1,6 +1,7 @@
 #include "SimModeWorldBase.h"
 #include <exception>
 #include "AirBlueprintLib.h"
+#include "Lockstep.h"
 
 
 void ASimModeWorldBase::BeginPlay()
@@ -17,8 +18,12 @@ void ASimModeWorldBase::initializeForPlay()
 
     std::unique_ptr<PhysicsEngineBase> physics_engine = createPhysicsEngine();
     physics_engine_ = physics_engine.get();
-    physics_world_.reset(new msr::airlib::PhysicsWorld(std::move(physics_engine),
-        vehicles, getPhysicsLoopPeriod()));
+    physics_world_.reset(new msr::airlib::PhysicsWorld(
+		std::move(physics_engine),
+        vehicles, getPhysicsLoopPeriod(), false, 
+		// VICTECH we need to disable async-updating of physics when lockstep enabled
+		!GLockstep.IsEnabled() 
+	));
 }
 
 void ASimModeWorldBase::EndPlay(const EEndPlayReason::Type EndPlayReason)

@@ -5,8 +5,10 @@
 
 #include "Lockstep.h"
 #include "Misc/CoreDelegates.h"
+#include "Kismet/GameplayStatics.h"
 #include "common/ClockFactory.hpp"
 #include "common/SteppableClock.hpp"
+#include "common/AirSimSettings.hpp"
 #include "UnrealImageCapture.h"
 #include "PawnSimApi.h"
 
@@ -21,19 +23,50 @@ FLockstep::~FLockstep()
 {
 }
 
-void FLockstep::SetEnabled(msr::airlib::ApiProvider* apiProvider)
+void FLockstep::Initialize(ASimModeBase* simmode)
 {
-	check(!isEnabled_);
-	isEnabled_ = true;
-	apiProvider_ = apiProvider;
+	check(simmode_ == nullptr);
+	simmode_ = simmode;
+	ASimModeWorldBase* simmode_world = Cast<ASimModeWorldBase>(simmode_);
 
-	// disable all vehicle camera
-	for (auto& simApi : apiProvider_->getVehicleSimApis())
+	// Adjust steppable clock
 	{
-		auto pawnSimApi = static_cast<PawnSimApi*>(simApi);
-		auto imageTypeCount = common_utils::Utils::toNumeric(ImageType::Count);
-		for (auto& camera : pawnSimApi->getCameras())
+		typedef common_utils::Utils Utils;
+		typedef msr::airlib::AirSimSettings AirSimSettings;
+		typedef msr::airlib::ClockFactory ClockFactory;
+		float clock_speed = AirSimSettings::singleton().clock_speed;
+		if (!Utils::isApproximatelyEqual(clock_speed, 1.0f))
+			throw std::invalid_argument("clock_speed must be 1.0 when lockstep is enabled");
+		if (simmode_world != nullptr)
+		{
+			double physicsPeriod = simmode_world->getPhysicsWorld().getUpdatePeriodNanos() * 1E-9;
+			physicsUpdatePerFrame_ = FMath::RoundToInt(float(FApp::GetFixedDeltaTime() / physicsPeriod));
+			FApp::SetFixedDeltaTime(physicsPeriod * physicsUpdatePerFrame_);
+			ClockFactory::get(std::make_shared<msr::airlib::SteppableClock>(
+				static_cast<msr::airlib::TTimeDelta>(physicsPeriod))); //no clock_speed multiplier
+		}
+		else
+		{
+			// We need to change scalable clock to steppable clock by FixedDeltaTime
+			msr::airlib::ClockFactory::get(std::make_shared<msr::airlib::SteppableClock>(
+				static_cast<msr::airlib::TTimeDelta>(FApp::GetFixedDeltaTime())));
+		}
+	}
+
+	// Disable window rendering
+	simmode_->CameraDirector->inputEventNoDisplayView();
+
+	// Disable all PIP camera
+	TSubclassOf<APIPCamera> classToFind = APIPCamera::StaticClass();
+	TArray<AActor*> foundActors;
+	UGameplayStatics::GetAllActorsOfClass(simmode_, classToFind, foundActors);
+	for (auto actor : foundActors)
+	{
+		if (APIPCamera* camera = Cast<APIPCamera>(actor))
+		{
 			camera->disableAll();
+			camera->onViewModeChanged(true);
+		}
 	}
 
 	FCoreDelegates::OnEndFrame.AddRaw(this, &FLockstep::Callback_OnEndFrame);
@@ -44,9 +77,8 @@ void FLockstep::Callback_OnEndFrame() // Called in GameThread
 {
 	check(IsInGameThread());
 
-	// We have to call CaptureScene manually because gameViewport->bDisableWorldRendering is turned on during lockstep
-	// https://answers.unrealengine.com/questions/759610/how-to-completely-disable-any-camera.html
-	for (auto& simApi : apiProvider_->getVehicleSimApis())
+	// We have to call CaptureScene manually
+	for (auto& simApi : simmode_->getApiProvider()->getVehicleSimApis())
 	{
 		auto pawnSimApi = static_cast<PawnSimApi*>(simApi);
 		auto imageTypeCount = common_utils::Utils::toNumeric(ImageType::Count);
@@ -76,8 +108,20 @@ void FLockstep::Callback_OnEndFrame() // Called in GameThread
 		cv_.wait(lk, [this]() { return isGameThreadRunning_; });
 	}
 
-	// TODO this would not work in SimModeWorld which contains internal async stepping task
-	msr::airlib::ClockFactory::get()->step();
+	// Step physics/clock here
+	ASimModeWorldBase* simmode_world = Cast<ASimModeWorldBase>(simmode_);
+	if (simmode_world != nullptr)
+	{
+		msr::airlib::PhysicsWorld& world = simmode_world->getPhysicsWorld();
+		world.lock();
+		for (int i = 0; i < physicsUpdatePerFrame_; i++)
+			world.updateSync();
+		world.unlock();
+	}
+	else
+	{
+		msr::airlib::ClockFactory::get()->step();
+	}
 }
 
 void FLockstep::Lockstep() // Called in external (i.e. rpc handler thread)

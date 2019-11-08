@@ -10,6 +10,10 @@
 
 namespace msr { namespace airlib {
 
+class CancelToken;
+class WaiterSyncSignal;
+class Waiter;
+
 class ClockBase {
 public:
     //returns value indicating nanoseconds elapsed since some reference timepoint in history
@@ -80,6 +84,22 @@ public:
 
         return static_cast<double>(clock_elapsed) / wall_clock_elapsed;
     }
+
+	// VICTECH do nothing basically
+	virtual bool isLockstepMode() const
+	{
+		return false;
+	}
+	virtual void registerWaiter(std::shared_ptr<WaiterSyncSignal> waiter_signal, TTimeDelta period)
+	{
+	}
+	virtual void unregisterWaiter(std::shared_ptr<WaiterSyncSignal> waiter_signal)
+	{
+	}
+	virtual void signalCanceledWaiter()
+	{
+	}
+	// VICTECH
 
 private:
     template <typename T>

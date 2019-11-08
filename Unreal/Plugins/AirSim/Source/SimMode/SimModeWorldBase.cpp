@@ -22,7 +22,7 @@ void ASimModeWorldBase::initializeForPlay()
 		std::move(physics_engine),
         vehicles, getPhysicsLoopPeriod(), false, 
 		// VICTECH we need to disable async-updating of physics when lockstep enabled
-		!GLockstep.IsEnabled() 
+		!FApp::UseFixedTimeStep()
 	));
 }
 
@@ -110,6 +110,11 @@ void ASimModeWorldBase::Tick(float DeltaSeconds)
 
         physics_world_->unlock();
     }
+
+	// VICTECH process world tick (Physics/ControlCommand)
+	if (GLockstep)
+		GLockstep->WorldTick(*physics_world_, DeltaSeconds);
+	// VICTECH
 
     //perform any expensive rendering update outside of lock region
     for (auto& api : getApiProvider()->getVehicleSimApis())

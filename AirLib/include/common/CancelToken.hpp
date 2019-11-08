@@ -33,10 +33,19 @@ public:
     void cancel()
     {
         is_cancelled_ = true;
-    }
+
+		// VICTECH
+		ClockFactory::get()->signalCanceledWaiter();
+		// VICTECH
+	}
 
     bool sleep(double secs)
     {
+		// VICTECH
+		if (ClockFactory::get()->isLockstepMode())
+			throw std::runtime_error("CancelToken::sleep should handled properly on lockstep mode!");
+		// VICTECH
+
         //We can pass duration directly to sleep_for however it is known that on 
         //some systems, sleep_for makes system call anyway even if passed duration 
         //is <= 0. This can cause 50us of delay due to context switch.

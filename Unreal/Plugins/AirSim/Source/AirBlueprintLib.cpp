@@ -246,8 +246,8 @@ void UAirBlueprintLib::RunCommandOnGameThread(TFunction<void()> InFunction, bool
         InFunction();
     else {
         FGraphEventRef task = FFunctionGraphTask::CreateAndDispatchWhenReady(MoveTemp(InFunction), InStatId, nullptr, ENamedThreads::GameThread);
-		if (GLockstep.IsEnabled())
-			GLockstep.Lockstep();
+		if (GLockstep)
+			GLockstep->Lockstep(true);
 		if (wait)
             FTaskGraphInterface::Get().WaitUntilTaskCompletes(task);
     }

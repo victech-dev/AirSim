@@ -31,9 +31,7 @@ public:
     virtual void pause(bool is_paused) override;
     virtual void continueForTime(double seconds) override;
 
-	// VICTECH
-	msr::airlib::PhysicsWorld& getPhysicsWorld() { return *physics_world_; }
-	// VICTECH
+	long long getPhysicsLoopPeriod() const;
 
 protected:
     void startAsyncUpdator();
@@ -43,7 +41,6 @@ protected:
     //should be called by derived class once all api_provider_ is ready to use
     void initializeForPlay();
 
-    long long getPhysicsLoopPeriod() const;
     void setPhysicsLoopPeriod(long long  period);
 private:
     typedef msr::airlib::UpdatableObject UpdatableObject;

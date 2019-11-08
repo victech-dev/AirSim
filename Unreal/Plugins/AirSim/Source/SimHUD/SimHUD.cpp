@@ -34,7 +34,7 @@ void ASimHUD::BeginPlay()
         setupInputBindings();
 
 		// VICTECH: enable lockstep feature
-		if (GLockstep.IsEnabled())
+		if (FApp::UseFixedTimeStep())
 		{			
 			// disable debug message output
 			GEngine->bEnableOnScreenDebugMessages = false;
@@ -42,7 +42,7 @@ void ASimHUD::BeginPlay()
 			if (widget_ != nullptr)
 				widget_->RemoveFromViewport();
 			// start lockstep
-			GLockstep.Initialize(simmode_);
+			FLockstep::Initialize(simmode_);
 		}
 
         if (simmode_)

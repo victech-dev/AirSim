@@ -60,11 +60,11 @@ void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::v
         results_ = results.data();
         req_size_ = req_size;
 
-		if (GLockstep.IsEnabled())
+		if (GLockstep)
 		{
 			// When lockstep on, UE GameThread is suspended for now, so this direct reading is safe here.
 			query_camera_pose_cb_();
-			// Note bCaptureEveryTick should be turned on for valid capture component.
+			// Note CaptureScene should be called already
 			ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)(
 				[this](FRHICommandListImmediate& RHICmdList) { ExecuteTask(); });
 		}

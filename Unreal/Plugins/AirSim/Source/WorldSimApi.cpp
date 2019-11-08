@@ -11,7 +11,7 @@ WorldSimApi::WorldSimApi(ASimModeBase* simmode)
 
 bool WorldSimApi::isPaused() const
 {
-	if (GLockstep.IsEnabled()) return false;
+	if (GLockstep) return false;
     return simmode_->isPaused();
 }
 
@@ -30,20 +30,20 @@ void WorldSimApi::reset()
 
 void WorldSimApi::pause(bool is_paused)
 {
-	if (GLockstep.IsEnabled()) return;
+	if (GLockstep) return;
     simmode_->pause(is_paused);
 }
 
 void WorldSimApi::continueForTime(double seconds)
 {
-	if (GLockstep.IsEnabled()) return;
+	if (GLockstep) return;
 	simmode_->continueForTime(seconds);
 }
 
 void WorldSimApi::lockstep()
 {
-	if (GLockstep.IsEnabled())
-		GLockstep.Lockstep();
+	if (GLockstep)
+		GLockstep->Lockstep();
 }
 
 void WorldSimApi::setTimeOfDay(bool is_enabled, const std::string& start_datetime, bool is_start_datetime_dst,

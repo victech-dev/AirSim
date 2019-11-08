@@ -81,23 +81,18 @@ public:
     void wait(_Predicate cancel)
     {
         // wait for signal or cancel predicate
-        while (!signaled_) {
-            std::unique_lock<std::mutex> lock(mutex_);
-            cv_.wait_for(lock, std::chrono::milliseconds(1), [this, cancel] {
-                return cancel();
-            });
-        }
+        std::unique_lock<std::mutex> lock(mutex_);
+        cv_.wait(lock, [this, cancel]() { return signaled_ || cancel(); });
         signaled_ = false;
     }
 
     bool waitFor(double timeout_sec)
     {
-        // wait for signal or timeout or cancel predicate
-        while (!signaled_) {
-            std::unique_lock<std::mutex> lock(mutex_);
-            cv_.wait_for(lock, std::chrono::milliseconds(
-                static_cast<long long>(timeout_sec * 1000)));
-        }
+        // wait for signal or timeout
+		auto d_sec = std::chrono::duration<double>(timeout_sec);
+		auto d_ms = std::chrono::duration_cast<std::chrono::milliseconds>(d_sec);
+		std::unique_lock<std::mutex> lock(mutex_);
+		cv_.wait_for(lock, d_ms, [this]() { return signaled_.load(); });
         signaled_ = false;
         return true;
     }
@@ -106,30 +101,26 @@ public:
     {
         // wait for signal or timeout or cancel predicate
         std::unique_lock<std::mutex> lock(mutex_);
-        while (!signaled_) {
-            cv_.wait(lock);
-        }
-        lock.unlock();
+		cv_.wait(lock, [this]() { return signaled_.load(); });
         signaled_ = false;
     }
 
     bool waitForRetry(double timeout_sec, int n_times)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        while (!signaled_ && n_times > 0) {
-            cv_.wait_for(lock, std::chrono::milliseconds(static_cast<long long>(timeout_sec * 1000)));
-            --n_times;
-        }
-        lock.unlock();
-        if (n_times == 0 && !signaled_) {
-            return false;
-        }
-        else {
-            signaled_ = false;
-            return true;
-        }
+		auto d_sec = std::chrono::duration<double>(timeout_sec);
+		auto d_ms = std::chrono::duration_cast<std::chrono::milliseconds>(d_sec);
+		std::unique_lock<std::mutex> lock(mutex_);
+		for ( ; n_times > 0; n_times--)
+		{
+			cv_.wait_for(lock, d_ms, [this]() { return signaled_.load(); });
+			if (signaled_)
+			{
+				signaled_ = false;
+				return true;
+			}
+		}
+		return false;
     }
-
 };
 
 // This class provides a synchronized worker thread that guarantees to execute

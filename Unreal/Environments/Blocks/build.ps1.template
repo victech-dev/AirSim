@@ -1,0 +1,24 @@
+$projectName = "AirSimNH"
+$projectPath = "D:\workspace\AirSim\Unreal\Environments\AirSimNH\AirSimNH.uproject"
+$targetPath = "D:\AirSimBuilds\AirSimNH"
+$originalPakPath = "D:\workspace\AirSimEnvironments\Neighborhood\AirSimNH\Content\Paks\AirSimNH-WindowsNoEditor.pak"
+
+Remove-Item $targetPath -Force -Recurse -ErrorAction SilentlyContinue
+New-Item $targetPath -ItemType Directory
+
+Write-Host ***** Package Unreal project ***** -ForegroundColor Green
+& "C:\Program Files\Epic Games\UE_4.22\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun -project="$projectPath" -noP4 -platform=Win64 -clientconfig=Shipping -serverconfig=Shipping -cook -allmaps -build -stage -pak -archive -archivedirectory="$targetPath"
+
+Write-Host ***** Switch to AirSim released pack file ***** -ForegroundColor Green
+cd $targetPath
+cd WindowsNoEditor
+cd $projectName\Content\Paks
+Rename-Item .\AirSimNH-WindowsNoEditor.pak .\__AirSimNH-WindowsNoEditor.pak
+Copy-Item $originalPakPath .
+cd ..\..\..
+
+Write-Host ***** Generate run.bat file ***** -ForegroundColor Green
+"start AirSimNH -Windowed -ResX=640 -ResY=480" | Out-File run.bat -Encoding ASCII
+"start AirSimNH -Windowed -ResX=640 -ResY=480 -FPS=30 -UseFixedTimestep" | Out-File run_lockstep.bat -Encoding ASCII
+
+ii .

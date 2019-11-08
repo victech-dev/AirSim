@@ -20,6 +20,8 @@ robocopy /MIR "%AirSimPath%\AirLib" Plugins\AirSim\Source\AirLib /XD temp *. /nj
 robocopy  /njh /njs /ndl /np "%AirSimPath%\Unreal\Environments\Blocks" "." *.bat 
 robocopy  /njh /njs /ndl /np "%AirSimPath%\Unreal\Environments\Blocks" "." *.sh  
 rem robocopy /njh /njs /ndl /np "%AirSimPath%" "." *.gitignore
+REM VICTECH build with released environment package
+robocopy  /njh /njs /ndl /np "%AirSimPath%\Unreal\Environments\Blocks" "." build.ps1.template  
 
 cmd /c clean.bat
 cmd /c GenerateProjectFiles.bat

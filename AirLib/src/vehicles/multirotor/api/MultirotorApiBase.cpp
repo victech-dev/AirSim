@@ -203,9 +203,7 @@ bool MultirotorApiBase::moveOnPath(const vector<Vector3r>& path, float velocity,
     float overshoot = 0;
     float goal_dist = 0;
 
-    //until we are at the end of the path (last seg is always zero size)
-    while (!waiter.isTimeout() && (next_path_loc.seg_index < path_segs.size()-1 || goal_dist > 0)
-        ) { //current position is approximately at the last end point
+	do {
 
         float seg_velocity = path_segs.at(next_path_loc.seg_index).seg_velocity;
         float path_length_remaining = path_length - path_segs.at(cur_path_loc.seg_index).seg_path_length - cur_path_loc.offset;
@@ -305,7 +303,7 @@ bool MultirotorApiBase::moveOnPath(const vector<Vector3r>& path, float velocity,
 
         //compute next target on path
         overshoot = setNextPathPosition(path3d, path_segs, cur_path_loc, lookahead + lookahead_error, next_path_loc);
-    }
+	} while (!waiter.isTimeout() && (next_path_loc.seg_index < path_segs.size() - 1 || goal_dist > 0));
 
     return waiter.isComplete();
 }

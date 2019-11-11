@@ -59,7 +59,7 @@ public:
         config_ = config;
 
         if (renabled) {
-            last_goal_ = goal_;
+			last_measured_ = std::numeric_limits<float>::quiet_NaN();
             integrator->set(output_);
         }
     }
@@ -77,7 +77,7 @@ public:
         measured_ = T();
         last_time_ = clock_ == nullptr ? 0 : clock_->millis();
         integrator->reset();
-        last_goal_ = goal_;
+		last_measured_ = std::numeric_limits<float>::quiet_NaN();
         min_dt_ = config_.time_scale * config_.time_scale;
     }
 
@@ -101,9 +101,9 @@ public:
 
             //To eliminate "derivative kick", we assume goal was approximately
             //constant between successive calls. dE = dGoal - dInput = -dInput
-            float error_der = - (goal_ - last_goal_) / dt;
-            dterm = error_der * config_.kd;
-            last_goal_ = goal_;
+			float error_der = std::isnan(last_measured_) ? 0 : -(measured_ - last_measured_) / dt;
+			dterm = error_der * config_.kd;
+			last_measured_ = measured_;
         }
 
         output_ = config_.output_bias + pterm + integrator->getOutput() + dterm;
@@ -127,7 +127,7 @@ private:
     uint64_t last_time_;
     const IBoardClock* clock_;
 
-    float last_goal_;
+    float last_measured_;
     float min_dt_;
     const PidConfig<T> config_;
 

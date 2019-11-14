@@ -14,6 +14,7 @@ class VehicleClient:
     def __init__(self, ip = "", port = 41451, timeout_value = 3600):
         if (ip == ""):
             ip = "127.0.0.1"
+        self.lockstep_mode = False
         self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = timeout_value, pack_encoding = 'utf-8', unpack_encoding = 'utf-8')
         
     # -----------------------------------  Common vehicle APIs ---------------------------------------------
@@ -47,6 +48,7 @@ class VehicleClient:
     def simContinueForTime(self, seconds):
         self.client.call('simContinueForTime', seconds)
     def simLockstep(self):
+        self.lockstep_mode = True
         self.client.call('simLockstep')
 
     def getHomeGeoPoint(self, vehicle_name = ''):
@@ -283,21 +285,28 @@ class MultirotorClient(VehicleClient, object):
 
     # APIs for control
     def moveByAngleZAsync(self, pitch, roll, z, yaw, duration, vehicle_name = ''):
-        return self.client.call_async('moveByAngleZ', pitch, roll, z, yaw, duration, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postMoveByAngleZ', pitch, roll, z, yaw, duration, vehicle_name)
+        else: return self.client.call_async('moveByAngleZ', pitch, roll, z, yaw, duration, vehicle_name)
     def moveByAngleThrottleAsync(self, pitch, roll, throttle, yaw_rate, duration, vehicle_name = ''):
-        return self.client.call_async('moveByAngleThrottle', pitch, roll, throttle, yaw_rate, duration, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postMoveByAngleThrottle', pitch, roll, throttle, yaw_rate, duration, vehicle_name)
+        else: return self.client.call_async('moveByAngleThrottle', pitch, roll, throttle, yaw_rate, duration, vehicle_name)
     def moveByVelocityAsync(self, vx, vy, vz, duration, drivetrain = DrivetrainType.MaxDegreeOfFreedom, yaw_mode = YawMode(), vehicle_name = ''):
-        return self.client.call_async('moveByVelocity', vx, vy, vz, duration, drivetrain, yaw_mode, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postMoveByVelocity', vx, vy, vz, duration, drivetrain, yaw_mode, vehicle_name)
+        else: return self.client.call_async('moveByVelocity', vx, vy, vz, duration, drivetrain, yaw_mode, vehicle_name)
     def moveByVelocityZAsync(self, vx, vy, z, duration, drivetrain = DrivetrainType.MaxDegreeOfFreedom, yaw_mode = YawMode(), vehicle_name = ''):
-        return self.client.call_async('moveByVelocityZ', vx, vy, z, duration, drivetrain, yaw_mode, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postMoveByVelocityZ', vx, vy, z, duration, drivetrain, yaw_mode, vehicle_name)
+        else: return self.client.call_async('moveByVelocityZ', vx, vy, z, duration, drivetrain, yaw_mode, vehicle_name)
     def moveOnPathAsync(self, path, velocity, timeout_sec = 3e+38, drivetrain = DrivetrainType.MaxDegreeOfFreedom, yaw_mode = YawMode(), 
         lookahead = -1, adaptive_lookahead = 1, vehicle_name = ''):
-        return self.client.call_async('moveOnPath', path, velocity, timeout_sec, drivetrain, yaw_mode, lookahead, adaptive_lookahead, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postMoveOnPath', path, velocity, timeout_sec, drivetrain, yaw_mode, lookahead, adaptive_lookahead, vehicle_name)
+        else: return self.client.call_async('moveOnPath', path, velocity, timeout_sec, drivetrain, yaw_mode, lookahead, adaptive_lookahead, vehicle_name)
     def moveToPositionAsync(self, x, y, z, velocity, timeout_sec = 3e+38, drivetrain = DrivetrainType.MaxDegreeOfFreedom, yaw_mode = YawMode(), 
         lookahead = -1, adaptive_lookahead = 1, vehicle_name = ''):
-        return self.client.call_async('moveToPosition', x, y, z, velocity, timeout_sec, drivetrain, yaw_mode, lookahead, adaptive_lookahead, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postMoveToPosition', x, y, z, velocity, timeout_sec, drivetrain, yaw_mode, lookahead, adaptive_lookahead, vehicle_name)
+        else: return self.client.call_async('moveToPosition', x, y, z, velocity, timeout_sec, drivetrain, yaw_mode, lookahead, adaptive_lookahead, vehicle_name)
     def moveToZAsync(self, z, velocity, timeout_sec = 3e+38, yaw_mode = YawMode(), lookahead = -1, adaptive_lookahead = 1, vehicle_name = ''):
-        return self.client.call_async('moveToZ', z, velocity, timeout_sec, yaw_mode, lookahead, adaptive_lookahead, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postMoveToZ', z, velocity, timeout_sec, yaw_mode, lookahead, adaptive_lookahead, vehicle_name)
+        else: return self.client.call_async('moveToZ', z, velocity, timeout_sec, yaw_mode, lookahead, adaptive_lookahead, vehicle_name)
     def moveByManualAsync(self, vx_max, vy_max, z_min, duration, drivetrain = DrivetrainType.MaxDegreeOfFreedom, yaw_mode = YawMode(), vehicle_name = ''):
         """Read current RC state and use it to control the vehicles. 
 
@@ -312,13 +321,17 @@ class MultirotorClient(VehicleClient, object):
         :param drivetrain: when ForwardOnly, vehicle rotates itself so that its front is always facing the direction of travel. If MaxDegreeOfFreedom then it doesn't do that (crab-like movement)
         :param yaw_mode: Specifies if vehicle should face at given angle (is_rate=False) or should be rotating around its axis at given rate (is_rate=True)
         """
-        return self.client.call_async('moveByManual', vx_max, vy_max, z_min, duration, drivetrain, yaw_mode, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postMoveByManual', vx_max, vy_max, z_min, duration, drivetrain, yaw_mode, vehicle_name)
+        else: return self.client.call_async('moveByManual', vx_max, vy_max, z_min, duration, drivetrain, yaw_mode, vehicle_name)
     def rotateToYawAsync(self, yaw, timeout_sec = 3e+38, margin = 5, vehicle_name = ''):
-        return self.client.call_async('rotateToYaw', yaw, timeout_sec, margin, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postRotateToYaw', yaw, timeout_sec, margin, vehicle_name)
+        else: return self.client.call_async('rotateToYaw', yaw, timeout_sec, margin, vehicle_name)
     def rotateByYawRateAsync(self, yaw_rate, duration, vehicle_name = ''):
-        return self.client.call_async('rotateByYawRate', yaw_rate, duration, vehicle_name)
+        if self.lockstep_mode: return self.client.call('postRotateByYawRate', yaw_rate, duration, vehicle_name)
+        else: return self.client.call_async('rotateByYawRate', yaw_rate, duration, vehicle_name)
     def hoverAsync(self, vehicle_name = ''):
-        return self.client.call_async('hover', vehicle_name)
+        if self.lockstep_mode: return self.client.call('postHover', vehicle_name)
+        else: return self.client.call_async('hover', vehicle_name)
 
     def moveByRC(self, rcdata = RCData(), vehicle_name = ''):
         return self.client.call('moveByRC', rcdata, vehicle_name)

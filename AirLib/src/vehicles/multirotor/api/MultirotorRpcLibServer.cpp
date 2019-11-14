@@ -28,6 +28,7 @@ STRICT_MODE_OFF
 #define check(expr) (static_cast<void>((expr)))
 #endif
 #include "common/common_utils/WindowsApisCommonPost.hpp"
+#include "common/common_utils/ctpl_stl.h"
 
 #include "vehicles/multirotor/api/MultirotorRpcLibAdapators.hpp"
 
@@ -35,6 +36,47 @@ STRICT_MODE_ON
 
 
 namespace msr { namespace airlib {
+
+// VICTECH
+// To implement lockstep robustly, we have to ensure the async command (like moveToPositionAsync) 
+// from external process (like python) is actually IGNITED before returning rpc handler. 
+// Since 'lockstep' simulates physical/control updates very fast as strand, if previous async command
+// (which is called before 'lockstep' command) did not create Waiter object yet, this command execution
+// has very much time-lag noise for training. To avoid this case, we create functor for worker thread and
+// make the rpc handler wait for the ignition signal of control command, 
+// so that next 'lockstep' is guaranteed to execute this control command.
+// original async command: [from python] client.async_call("moveToPosition", params) # never mind after rpc call
+// lockstep post command: [from python] client.call("postMoveToPosition", params) # wait until the command is registered
+thread_local std::promise<void>* tlsPostedControlCommandIgnition = nullptr;
+class PostedControlCommandHandler
+{
+public:
+	template<typename F>
+	void Run(F func, std::shared_ptr<std::promise<void>> ignition)
+	{
+		threads_.push([=](int i) {
+			unused(i);
+			tlsPostedControlCommandIgnition = ignition.get();
+			try { 
+				if (!ClockFactory::get()->isLockstepMode())
+					throw std::runtime_error("PostCommand only works for lockstep mode !");
+				func(); 
+			} 
+			catch (std::exception & e) { 
+				Utils::log(e.what(), Utils::kLogLevelError);
+			}
+			if (tlsPostedControlCommandIgnition != nullptr)
+			{
+				tlsPostedControlCommandIgnition->set_value();
+				tlsPostedControlCommandIgnition = nullptr;
+			}
+		});
+	}
+private:
+	ctpl::thread_pool threads_{ 4 };
+};
+static PostedControlCommandHandler sPostedControlCommandHandler;
+// VICTECH
 
 typedef msr::airlib_rpclib::MultirotorRpcLibAdapators MultirotorRpcLibAdapators;
 
@@ -125,6 +167,96 @@ MultirotorRpcLibServer::MultirotorRpcLibServer(ApiProvider* api_provider, string
         bind("getMultirotorState", [&](const std::string& vehicle_name) -> MultirotorRpcLibAdapators::MultirotorState {
         return MultirotorRpcLibAdapators::MultirotorState(getVehicleApi(vehicle_name)->getMultirotorState()); 
     });
+
+	// VICTECH - in case of post command of lockstep mode (analogue to async command of normal mode)
+	(static_cast<rpc::server*>(getServer()))-> bind("postMoveByAngleZ", 
+		[&](float pitch, float roll, float z, float yaw, float duration, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::moveByAngleZ, getVehicleApi(vehicle_name), pitch, roll, z, yaw, duration), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postMoveByAngleThrottle", 
+		[&](float pitch, float roll, float throttle, float yaw_rate, float duration, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::moveByAngleThrottle,
+			getVehicleApi(vehicle_name), pitch, roll, throttle, yaw_rate, duration), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postMoveByVelocity", 
+		[&](float vx, float vy, float vz, float duration, DrivetrainType drivetrain, const MultirotorRpcLibAdapators::YawMode& yaw_mode, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::moveByVelocity,
+			getVehicleApi(vehicle_name), vx, vy, vz, duration, drivetrain, yaw_mode.to()), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postMoveByVelocityZ", 
+		[&](float vx, float vy, float z, float duration, DrivetrainType drivetrain, const MultirotorRpcLibAdapators::YawMode& yaw_mode, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::moveByVelocityZ,
+			getVehicleApi(vehicle_name), vx, vy, z, duration, drivetrain, yaw_mode.to()), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postMoveOnPath", 
+		[&](const vector<MultirotorRpcLibAdapators::Vector3r>& path, float velocity, float timeout_sec, DrivetrainType drivetrain, const MultirotorRpcLibAdapators::YawMode& yaw_mode, float lookahead, float adaptive_lookahead, const std::string& vehicle_name) {
+		vector<Vector3r> conv_path;
+		MultirotorRpcLibAdapators::to(path, conv_path);
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::moveOnPath,
+			getVehicleApi(vehicle_name), std::move(conv_path), velocity, timeout_sec, drivetrain, yaw_mode.to(), lookahead, adaptive_lookahead), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postMoveToPosition", 
+		[&](float x, float y, float z, float velocity, float timeout_sec, DrivetrainType drivetrain, const MultirotorRpcLibAdapators::YawMode& yaw_mode, float lookahead, float adaptive_lookahead, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::moveToPosition,
+			getVehicleApi(vehicle_name), x, y, z, velocity, timeout_sec, drivetrain, yaw_mode.to(), lookahead, adaptive_lookahead), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postMoveToZ", 
+		[&](float z, float velocity, float timeout_sec, const MultirotorRpcLibAdapators::YawMode& yaw_mode, float lookahead, float adaptive_lookahead, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::moveToZ, 
+			getVehicleApi(vehicle_name), z, velocity, timeout_sec, yaw_mode.to(), lookahead, adaptive_lookahead), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postMoveByManual", 
+		[&](float vx_max, float vy_max, float z_min, float duration, DrivetrainType drivetrain, const MultirotorRpcLibAdapators::YawMode& yaw_mode, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::moveByManual, 
+			getVehicleApi(vehicle_name), vx_max, vy_max, z_min, duration, drivetrain, yaw_mode.to()), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postRotateToYaw", 
+		[&](float yaw, float timeout_sec, float margin, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::rotateToYaw, getVehicleApi(vehicle_name), yaw, timeout_sec, margin), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postRotateByYawRate", 
+		[&](float yaw_rate, float duration, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::rotateByYawRate, getVehicleApi(vehicle_name), yaw_rate, duration), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postHover", 
+		[&](const std::string& vehicle_name) {
+		return getVehicleApi(vehicle_name)->hover();
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::hover, getVehicleApi(vehicle_name)), ignition);
+		ignition_signal.wait();
+	});
+	// VICTECH - in case of async command with lockstep
 }
 
 //required for pimpl

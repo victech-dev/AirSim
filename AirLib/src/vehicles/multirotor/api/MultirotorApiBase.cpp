@@ -203,7 +203,22 @@ bool MultirotorApiBase::moveOnPath(const vector<Vector3r>& path, float velocity,
     float overshoot = 0;
     float goal_dist = 0;
 
-	do {
+	float accum_dist_decay_continuous = 0.01f; // '1' decays to '0.01' after 1sec
+	float accum_dist_decay_discrete = std::pow(accum_dist_decay_continuous, getCommandPeriod());
+	float accum_dist_margin = 0.1f;
+	float accum_dist = accum_dist_margin / accum_dist_decay_continuous; // initial 1sec margin without additional movements.
+	auto term_cond = [&]() -> bool {
+		accum_dist = accum_dist * accum_dist_decay_discrete + std::abs(goal_dist);
+		if (waiter.isTimeout() || waiter.isComplete())
+			return true;
+		if (next_path_loc.seg_index < path_segs.size() - 1 || goal_dist > 0)
+			return false;
+		if ((getPosition() - path3d.back()).norm() < getDistanceAccuracy() && accum_dist < accum_dist_margin)
+			return true;
+		return false;
+	};
+
+	while (!term_cond()) {
 
         float seg_velocity = path_segs.at(next_path_loc.seg_index).seg_velocity;
         float path_length_remaining = path_length - path_segs.at(cur_path_loc.seg_index).seg_path_length - cur_path_loc.offset;
@@ -303,7 +318,7 @@ bool MultirotorApiBase::moveOnPath(const vector<Vector3r>& path, float velocity,
 
         //compute next target on path
         overshoot = setNextPathPosition(path3d, path_segs, cur_path_loc, lookahead + lookahead_error, next_path_loc);
-	} while (!waiter.isTimeout() && (next_path_loc.seg_index < path_segs.size() - 1 || goal_dist > 0));
+	};
 
     return waiter.isComplete();
 }

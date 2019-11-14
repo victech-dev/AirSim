@@ -14,6 +14,9 @@
 
 namespace msr { namespace airlib {
 
+// VICTECH
+extern thread_local std::promise<void>* tlsPostedControlCommandIgnition;
+
 // VICTECH implementation of bidirectional signal
 class WaiterSyncSignal
 {
@@ -82,6 +85,11 @@ public:
 			// this is called from worker thread (like rpc handler), so that working is true for now.
 			sync_signal_ = std::make_shared<WaiterSyncSignal>(true, cancelable_action_);
 			clock()->registerWaiter(sync_signal_, sleep_duration_);
+			if (tlsPostedControlCommandIgnition != nullptr)
+			{
+				tlsPostedControlCommandIgnition->set_value();
+				tlsPostedControlCommandIgnition = nullptr;
+			}
 		}
 		// VICTECH
 	}

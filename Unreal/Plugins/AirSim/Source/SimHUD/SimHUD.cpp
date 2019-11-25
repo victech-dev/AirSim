@@ -36,8 +36,6 @@ void ASimHUD::BeginPlay()
 		// VICTECH: enable lockstep feature
 		if (FApp::UseFixedTimeStep())
 		{			
-			// disable debug message output
-			GEngine->bEnableOnScreenDebugMessages = false;
 			// disable widget rendering
 			if (widget_ != nullptr)
 				widget_->RemoveFromViewport();

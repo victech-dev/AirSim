@@ -42,6 +42,22 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
         visibilityChanged = const_cast<UnrealImageCapture*>(this)->updateCameraVisibility(camera, requests[i]) || visibilityChanged;
     }
 
+	// VICTECH we need to turn on USceneCaptureComponent2D::bCaptureEveryFrame, USceneCaptureComponent2D::bCaptureOnMovement 
+	if (visibilityChanged)
+	{
+		for (unsigned int i = 0; i < requests.size(); ++i) 
+		{
+			APIPCamera* camera = cameras_->at(requests.at(i).camera_name);
+			USceneCaptureComponent2D* capture = camera->getCaptureComponent(requests[i].image_type, true);
+			if (capture != nullptr)
+			{
+				capture->bCaptureEveryFrame = true;
+				capture->bCaptureOnMovement = true;
+			}
+		}
+	}
+	// VICTECH
+
     if (use_safe_method && visibilityChanged) {
         // We don't do game/render thread synchronization for safe method.
         // We just blindly sleep for 200ms (the old way)

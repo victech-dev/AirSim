@@ -4,11 +4,13 @@
 #pragma once
 
 #include "Lockstep.h"
-#include "Misc/CoreDelegates.h"
+#include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
+#include "Misc/CoreDelegates.h"
 #include "common/ClockFactory.hpp"
 #include "common/SteppableClock.hpp"
 #include "common/AirSimSettings.hpp"
+#include "AirBlueprintLib.h"
 #include "UnrealImageCapture.h"
 #include "PawnSimApi.h"
 
@@ -28,8 +30,12 @@ void FLockstep::Initialize(ASimModeBase* simmode)
 {
 	check(!GLockstep);
 
-	//simmode_ = simmode;
 	ASimModeWorldBase* simmode_world = Cast<ASimModeWorldBase>(simmode);
+
+	// disable debug message output
+	GEngine->bEnableOnScreenDebugMessages = false;
+	// disable viewport rendering
+	UAirBlueprintLib::enableViewportRendering(simmode, false);
 
 	// Adjust steppable clock
 	{
@@ -52,9 +58,6 @@ void FLockstep::Initialize(ASimModeBase* simmode)
 		ClockFactory::get(GLockstep);
 	}
 
-	// Disable window rendering
-	simmode->CameraDirector->inputEventNoDisplayView();
-
 	// Disable all PIP camera
 	TSubclassOf<APIPCamera> classToFind = APIPCamera::StaticClass();
 	TArray<AActor*> foundActors;
@@ -75,22 +78,6 @@ void FLockstep::Initialize(ASimModeBase* simmode)
 void FLockstep::Callback_OnEndFrame() 
 {
 	check(IsInGameThread());
-
-	// We have to call CaptureScene manually
-	for (auto& simApi : simmode_->getApiProvider()->getVehicleSimApis())
-	{
-		auto pawnSimApi = static_cast<PawnSimApi*>(simApi);
-		auto imageTypeCount = common_utils::Utils::toNumeric(ImageType::Count);
-		for (auto& camera : pawnSimApi->getCameras())
-		{
-			for (int image_type = 0; image_type < imageTypeCount; ++image_type)
-			{
-				USceneCaptureComponent2D* capture = camera->getCaptureComponent(common_utils::Utils::toEnum<ImageType>(image_type), true);
-				if (capture != nullptr)
-					capture->CaptureScene();
-			}
-		}
-	}
 
 	// Signal end of frame
 	{

@@ -58,7 +58,7 @@ class VehicleClient:
         if self.ping():
             print("Connected!")
         else:
-             print("Ping returned false!")
+            print("Ping returned false!")
         server_ver = self.getServerVersion()
         client_ver = self.getClientVersion()
         server_min_ver = self.getMinRequiredServerVersion()

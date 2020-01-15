@@ -2,6 +2,7 @@
 #define MavLinkCom_HighPriorityThread_hpp
 
 #include <thread>
+#include <string> // VICTECH
 
 namespace mavlink_utils {
 

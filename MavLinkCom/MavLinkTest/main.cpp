@@ -121,7 +121,7 @@ PortAddress serverEndPoint;
 
 bool connectLogViewer = false;
 PortAddress logViewerEndPoint;
-#define DEFAULT_LOGVIEWER_PORT 14570
+#define DEFAULT_LOGVIEWER_PORT 14388
 
 // These are used to echo the mavlink messages to other 3rd party apps like QGC or LogViewer.
 std::vector<PortAddress> proxyEndPoints;
@@ -1063,7 +1063,7 @@ std::shared_ptr<MavLinkConnection> connectServer(const PortAddress& endPoint, st
 
 void runTelemetry() {
     while (telemetry) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         if (droneConnection != nullptr) {
             MavLinkTelemetry tel;
             tel.wifiInterfaceName = ifaceName.c_str();
@@ -1117,13 +1117,6 @@ bool connect()
         usedPorts.push_back(offboardEndPoint);
     }
 
-    if (verbose) {
-        droneConnection->subscribe([=](std::shared_ptr<MavLinkConnection> con, const MavLinkMessage& msg) {
-            printf("Received msg %d from drone\n", static_cast<int>(msg.msgid));
-        });
-    }
-
-
     if (server)
     {
         if (serverEndPoint.addr == "") {
@@ -1147,6 +1140,12 @@ bool connect()
     {
         // failed to connect
         return false;
+    }
+
+    if (verbose) {
+        droneConnection->subscribe([=](std::shared_ptr<MavLinkConnection> con, const MavLinkMessage& msg) {
+            printf("Received msg %d from drone\n", static_cast<int>(msg.msgid));
+            });
     }
 
     if (outLogFile != nullptr) {

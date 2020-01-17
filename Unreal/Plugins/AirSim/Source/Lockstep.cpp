@@ -34,8 +34,8 @@ void FLockstep::Initialize(ASimModeBase* simmode)
 
 	// disable debug message output
 	GEngine->bEnableOnScreenDebugMessages = false;
-	// disable viewport rendering
-	UAirBlueprintLib::enableViewportRendering(simmode, false);
+	// disable rendering (this cound be restored if simGetImages requested afterward)
+	simmode->CameraDirector->inputEventNoDisplayView();
 
 	// Adjust steppable clock
 	{
@@ -56,19 +56,6 @@ void FLockstep::Initialize(ASimModeBase* simmode)
 		if (simmode_world != nullptr)
 			GLockstep->RegisterPhysicsEvent(GLockstep->getStepSize());
 		ClockFactory::get(GLockstep);
-	}
-
-	// Disable all PIP camera
-	TSubclassOf<APIPCamera> classToFind = APIPCamera::StaticClass();
-	TArray<AActor*> foundActors;
-	UGameplayStatics::GetAllActorsOfClass(simmode, classToFind, foundActors);
-	for (auto actor : foundActors)
-	{
-		if (APIPCamera* camera = Cast<APIPCamera>(actor))
-		{
-			camera->disableAll();
-			camera->onViewModeChanged(true);
-		}
 	}
 
 	FCoreDelegates::OnEndFrame.AddRaw(GLockstep.get(), &FLockstep::Callback_OnEndFrame);
@@ -143,6 +130,28 @@ void FLockstep::WorldTick(msr::airlib::PhysicsWorld& world, float deltaTime)
 			front.waiter_signal->signalToWorker();
 			UE_LOG(LogTemp, Log, TEXT("ControlCommand %lld"), front.time);
 			break;
+		}
+	}
+}
+
+void FLockstep::RestoreViewMode()
+{
+	ACameraDirector* camera = simmode_->CameraDirector;
+	ECameraDirectorMode initialMode = simmode_->getInitialViewMode();
+	if (camera->getMode() != initialMode)
+	{
+		switch (initialMode)
+		{
+		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FLY_WITH_ME: camera->inputEventFlyWithView(); break;
+		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FPV: camera->inputEventFpvView(); break;
+		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_GROUND_OBSERVER: camera->inputEventGroundView(); break;
+		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL: camera->inputEventManualView(); break;
+		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE: camera->inputEventSpringArmChaseView(); break;
+		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_BACKUP: camera->inputEventBackupView(); break;
+		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY: camera->inputEventNoDisplayView(); break;
+		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FRONT: camera->inputEventFrontView(); break;
+		default:
+			throw std::out_of_range("Unsupported view mode specified in CameraDirector::initializeForBeginPlay");
 		}
 	}
 }

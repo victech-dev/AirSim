@@ -27,6 +27,9 @@ public:
 	// Physics/ControlCommand update
 	void WorldTick(msr::airlib::PhysicsWorld& world, float deltaTime);
 
+	// Restore view mode if simGetImages requested
+	void RestoreViewMode();
+
 	// from SteppableClock
 	virtual bool isLockstepMode() const override
 	{

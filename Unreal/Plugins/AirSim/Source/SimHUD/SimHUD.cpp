@@ -3,6 +3,7 @@
 #include "Engine/Engine.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Misc/FileHelper.h"
+#include "Components/LineBatchComponent.h"
 
 #include "Vehicles/Multirotor/SimModeWorldMultiRotor.h"
 #include "Vehicles/Car/SimModeCar.h"
@@ -41,6 +42,40 @@ void ASimHUD::BeginPlay()
 				widget_->RemoveFromViewport();
 			// start lockstep
 			FLockstep::Initialize(simmode_);
+		}
+
+
+		// VICTECH Draw track here!
+		{
+			typedef NedTransform::Vector3r Vector3r;
+			const NedTransform& local_ned_tf = simmode_->getVehicleSimApi()->getNedTransform();
+			TArray<FBatchedLine> lines;
+			auto add_ned_line = [&](const Vector3r& p0, const Vector3r& p1) {
+				FBatchedLine line(local_ned_tf.fromLocalNed(p0), local_ned_tf.fromLocalNed(p1), FLinearColor(1, 0.5, 0, 1), 0, 8, 0);
+				lines.Add(line);
+			};
+			auto add_circle_segs = [&](const Vector3r& org, float radius, float theta0, float theta1) {
+				int count = 32;
+				for (int i = 0; i < count; i++)
+				{
+					float a0 = theta0 + (theta1 - theta0) * i / count;
+					float a1 = theta0 + (theta1 - theta0) * (i + 1) / count;
+					Vector3r offset0 = Eigen::AngleAxisf(a0, Vector3r::UnitZ()) * Vector3r::UnitX() * radius;
+					Vector3r offset1 = Eigen::AngleAxisf(a1, Vector3r::UnitZ()) * Vector3r::UnitX() * radius;
+					add_ned_line(org + offset0, org + offset1);
+				}
+			};
+
+			Vector3r p0(0, -1, -3), p1(129, -1, -3), p2(129, 127, -3), p3(0, 127, -3); // local NED coord
+			add_ned_line(p0 + 5 * Vector3r::UnitX(), p1 - 10 * Vector3r::UnitX());
+			add_circle_segs(p1 + Vector3r(-10, 10, 0), 10, 1.5f * M_PIf, 2.0f * M_PIf);
+			add_ned_line(p1 + 10 * Vector3r::UnitY(), p2 - 10 * Vector3r::UnitY());
+			add_circle_segs(p2 + Vector3r(-10, -10, 0), 10, 0, 0.5f * M_PIf);
+			add_ned_line(p2 - 10 * Vector3r::UnitX(), p3 + 20 * Vector3r::UnitX());
+			add_circle_segs(p3 + Vector3r(20, -20, 0), 20, 0.5f * M_PIf, M_PIf);
+			add_ned_line(p3 - 20 * Vector3r::UnitY(), p0 + 5 * Vector3r::UnitY());
+			add_circle_segs(p0 + Vector3r(5, 5, 0), 5, M_PIf, 1.5f * M_PIf);
+			GetWorld()->PersistentLineBatcher->DrawLines(lines);
 		}
 
         if (simmode_)

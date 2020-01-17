@@ -4,6 +4,7 @@
 
 #include "RenderRequest.h"
 #include "common/ClockFactory.hpp"
+#include "Lockstep.h"
 
 UnrealImageCapture::UnrealImageCapture(const common_utils::UniqueValueMap<std::string, APIPCamera*>* cameras)
     : cameras_(cameras)
@@ -32,6 +33,11 @@ void UnrealImageCapture::getImages(const std::vector<msr::airlib::ImageCaptureBa
 void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::ImageCaptureBase::ImageRequest>& requests, 
     std::vector<msr::airlib::ImageCaptureBase::ImageResponse>& responses, bool use_safe_method) const
 {
+	// VICTECH 
+	if (GLockstep)
+		GLockstep->RestoreViewMode();
+	// VICTECH
+
     std::vector<std::shared_ptr<RenderRequest::RenderParams>> render_params;
     std::vector<std::shared_ptr<RenderRequest::RenderResult>> render_results;
 
@@ -41,22 +47,6 @@ void UnrealImageCapture::getSceneCaptureImage(const std::vector<msr::airlib::Ima
         //TODO: may be we should have these methods non-const?
         visibilityChanged = const_cast<UnrealImageCapture*>(this)->updateCameraVisibility(camera, requests[i]) || visibilityChanged;
     }
-
-	// VICTECH we need to turn on USceneCaptureComponent2D::bCaptureEveryFrame, USceneCaptureComponent2D::bCaptureOnMovement 
-	if (visibilityChanged)
-	{
-		for (unsigned int i = 0; i < requests.size(); ++i) 
-		{
-			APIPCamera* camera = cameras_->at(requests.at(i).camera_name);
-			USceneCaptureComponent2D* capture = camera->getCaptureComponent(requests[i].image_type, true);
-			if (capture != nullptr)
-			{
-				capture->bCaptureEveryFrame = true;
-				capture->bCaptureOnMovement = true;
-			}
-		}
-	}
-	// VICTECH
 
     if (use_safe_method && visibilityChanged) {
         // We don't do game/render thread synchronization for safe method.

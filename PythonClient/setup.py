@@ -21,5 +21,8 @@ setuptools.setup(
     ),
     install_requires=[
           'msgpack-rpc-python', 'numpy', 'opencv-contrib-python'
+          # VICTECH
+          , 'pypiwin32'
+          # VICTECH
     ]
 )

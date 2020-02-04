@@ -140,19 +140,21 @@ void FLockstep::RestoreViewMode()
 	ECameraDirectorMode initialMode = simmode_->getInitialViewMode();
 	if (camera->getMode() != initialMode)
 	{
-		switch (initialMode)
-		{
-		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FLY_WITH_ME: camera->inputEventFlyWithView(); break;
-		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FPV: camera->inputEventFpvView(); break;
-		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_GROUND_OBSERVER: camera->inputEventGroundView(); break;
-		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL: camera->inputEventManualView(); break;
-		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE: camera->inputEventSpringArmChaseView(); break;
-		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_BACKUP: camera->inputEventBackupView(); break;
-		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY: camera->inputEventNoDisplayView(); break;
-		case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FRONT: camera->inputEventFrontView(); break;
-		default:
-			throw std::out_of_range("Unsupported view mode specified in CameraDirector::initializeForBeginPlay");
-		}
+		UAirBlueprintLib::RunCommandOnGameThread([=]() {
+			switch (initialMode)
+			{
+			case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FLY_WITH_ME: camera->inputEventFlyWithView(); break;
+			case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FPV: camera->inputEventFpvView(); break;
+			case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_GROUND_OBSERVER: camera->inputEventGroundView(); break;
+			case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL: camera->inputEventManualView(); break;
+			case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE: camera->inputEventSpringArmChaseView(); break;
+			case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_BACKUP: camera->inputEventBackupView(); break;
+			case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY: camera->inputEventNoDisplayView(); break;
+			case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FRONT: camera->inputEventFrontView(); break;
+			default:
+				throw std::out_of_range("Unsupported view mode specified in CameraDirector::initializeForBeginPlay");
+			}
+		}, true);
 	}
 }
 

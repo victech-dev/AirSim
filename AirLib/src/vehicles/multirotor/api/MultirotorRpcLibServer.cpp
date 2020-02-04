@@ -169,6 +169,27 @@ MultirotorRpcLibServer::MultirotorRpcLibServer(ApiProvider* api_provider, string
     });
 
 	// VICTECH - in case of post command of lockstep mode (analogue to async command of normal mode)
+	(static_cast<rpc::server*>(getServer()))->bind("postTakeoff", 
+		[&](float timeout_sec, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::takeoff, getVehicleApi(vehicle_name), timeout_sec), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postLand", 
+		[&](float timeout_sec, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::land, getVehicleApi(vehicle_name), timeout_sec), ignition);
+		ignition_signal.wait();
+	});
+	(static_cast<rpc::server*>(getServer()))->bind("postGoHome", 
+		[&](float timeout_sec, const std::string& vehicle_name) {
+		auto ignition = std::make_shared<std::promise<void>>();
+		std::future<void> ignition_signal = ignition->get_future();
+		sPostedControlCommandHandler.Run(std::bind(&MultirotorApiBase::goHome, getVehicleApi(vehicle_name), timeout_sec), ignition);
+		ignition_signal.wait();
+	});
 	(static_cast<rpc::server*>(getServer()))-> bind("postMoveByAngleZ", 
 		[&](float pitch, float roll, float z, float yaw, float duration, const std::string& vehicle_name) {
 		auto ignition = std::make_shared<std::promise<void>>();

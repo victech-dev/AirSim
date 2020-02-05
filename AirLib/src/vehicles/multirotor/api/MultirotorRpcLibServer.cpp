@@ -276,13 +276,6 @@ MultirotorRpcLibServer::MultirotorRpcLibServer(ApiProvider* api_provider, string
 		sControlCommandHookWrapper.Run(std::bind(&MultirotorApiBase::hover, getVehicleApi(vehicle_name)), hook);
 		hook_signal.wait();
 	});
-	(static_cast<rpc::server*>(getServer()))->bind("hook_moveByRC", 
-		[&](const MultirotorRpcLibAdapators::RCData& data, const std::string& vehicle_name) {
-		auto hook = std::make_shared<std::promise<void>>();
-		std::future<void> hook_signal = hook->get_future();
-		sControlCommandHookWrapper.Run(std::bind(&MultirotorApiBase::moveByRC, getVehicleApi(vehicle_name), data.to()), hook);
-		hook_signal.wait();
-	});
 }
 
 //required for pimpl

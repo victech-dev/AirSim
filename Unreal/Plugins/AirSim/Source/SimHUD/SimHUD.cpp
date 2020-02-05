@@ -46,6 +46,7 @@ void ASimHUD::BeginPlay()
 
 
 		// VICTECH Draw track here!
+		if (AirSimSettings::singleton().simmode_name == "Multirotor")
 		{
 			typedef NedTransform::Vector3r Vector3r;
 			const NedTransform& local_ned_tf = simmode_->getVehicleSimApi()->getNedTransform();

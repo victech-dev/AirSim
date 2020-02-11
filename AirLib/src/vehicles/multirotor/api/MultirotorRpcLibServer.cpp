@@ -276,6 +276,15 @@ MultirotorRpcLibServer::MultirotorRpcLibServer(ApiProvider* api_provider, string
 		sControlCommandHookWrapper.Run(std::bind(&MultirotorApiBase::hover, getVehicleApi(vehicle_name)), hook);
 		hook_signal.wait();
 	});
+
+	// VICTECH - support to read actuations
+	(static_cast<rpc::server*>(getServer()))->bind("getActuations", [&](const std::string& vehicle_name) -> std::vector<float> {
+		auto api = getVehicleApi(vehicle_name);
+		std::vector<float> actuations(api->getActuatorCount());
+		for (size_t i = 0; i < actuations.size(); i++)
+			actuations[i] = api->getActuation(i);
+		return actuations;
+	});
 }
 
 //required for pimpl
